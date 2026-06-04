@@ -27,4 +27,6 @@ from simulation import Simulation
 # exit(0)
 
 # a = Simulation("./tb_adder.vcd")
-a = Simulation("./post_synth.vcd")
+sim = Simulation("./post_synth.vcd")
+for t in sim:
+    print(f"tick at {t}")
