@@ -28,8 +28,10 @@ def flatten_vcd(data):
         if "data" in d:
             if len(d["data"]) > 0:
                 flat["/".join(pile)] = {
-                    key: val for key, val in d.items() if key != "children"
-                }
+                    key: val
+                    for key, val in d.items()
+                    if key not in {"name", "children"}
+                }.update({"name": "/".join(pile)})
         if "children" in d:
             todo.put(None)
             for child in d["children"]:
@@ -40,9 +42,9 @@ def flatten_vcd(data):
 
 
 class Simulation:
-    def __init__(self, file_name, clk="clk", reset="resetn"):
-        print(f"Loading '{file_name}'", end=" ", flush=True)
-        with open(file_name) as vcd_file:
+    def __init__(self, filename, clk="clk", reset="resetn"):
+        print(f"Loading '{filename}'", end=" ", flush=True)
+        with open(filename) as vcd_file:
             vcd = VcdParser()
             vcd.parse(vcd_file)
             data = vcd.scope.toJson()
@@ -58,6 +60,15 @@ class Simulation:
             print(f"[ERROR] Signal {reset} not found.")
             raise ValueError
         self.rst_data = rst_data["data"]
+        self.clk = []
+        reset = True
+        for i in self.clk_data:
+            if reset:
+                val = self.data_at_time(i[0], self.rst_data)
+                if val[1] == "1":
+                    reset = False
+            elif i[1] == "1":  # raising edge
+                self.clk.append(i[0])
 
     def find_data(self, filters):
         ret = None
@@ -68,8 +79,9 @@ class Simulation:
                 first = False
             else:
                 ret = [i for i in ret if f in i["name"]]
-        if len(ret) == 0:
-            return None
+            print(len(ret))
+            if len(ret) == 0:
+                return None
         if len(ret) > 1:
             print(f"[WARNING] More than one match for signal {filters}")
         return ret[0]
@@ -93,11 +105,7 @@ class Simulation:
         return ret
 
     def __iter__(self):
-        reset = True
-        for i in self.clk_data:
-            if reset:
-                val = self.data_at_time(i[0], self.rst_data)
-                if val[1] == "1":
-                    reset = False
-            elif i[1] == "1":  # raising edge
-                yield i[0]
+        return iter(self.clk)
+
+    def __len__(self):
+        return len(self.clk)

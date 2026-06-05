@@ -8,25 +8,18 @@
 #
 # ######################################################################################################################
 
-from simulation import Simulation
+from Simulation import Simulation
+from ODCCorrespondance import ODCCorrespondance
+from ODCResults import ODCResults
 
-# import json, sys
-# from pyDigitalWaveTools.vcd.parser import VcdParser
-# if len(sys.argv) > 1:
-#     fname = sys.argv[1]
-# else:
-#     print('Give me a vcd file to parse')
-#     sys.exit(-1)
-#
-# with open(fname) as vcd_file:
-#     vcd = VcdParser()
-#     vcd.parse(vcd_file)
-#     data = vcd.scope.toJson()
-#     print(json.dumps(data, indent=2, sort_keys=True))
-#
-# exit(0)
 
-# a = Simulation("./tb_adder.vcd")
 sim = Simulation("./post_synth.vcd")
+cor = ODCCorrespondance("./top_bien_correspondance.json", sim)
+res = ODCResults("./top_bien_odc.json", sim, cor)
+
+i = 0
 for t in sim:
     print(f"tick at {t}")
+    i+=1
+    if i > 20:
+        break
