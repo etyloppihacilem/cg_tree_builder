@@ -9,6 +9,7 @@
 # ######################################################################################################################
 
 from queue import LifoQueue
+import re
 from bisect import bisect_right
 from pyDigitalWaveTools.vcd.parser import VcdParser
 
@@ -27,11 +28,15 @@ def flatten_vcd(data):
         pile.append(d["name"])
         if "data" in d:
             if len(d["data"]) > 0:
-                flat["/".join(pile)] = {
+                address = "/".join(pile)
+                plug = {
                     key: val
                     for key, val in d.items()
-                    if key not in {"name", "children"}
-                }.update({"name": "/".join(pile)})
+                    if key not in {"name", "children", "data"}
+                }
+                plug.update({"name": address})
+                plug["data"] = [(i[0], i[1]) for i in d["data"]]
+                flat[address] = plug
         if "children" in d:
             todo.put(None)
             for child in d["children"]:
@@ -43,12 +48,16 @@ def flatten_vcd(data):
 
 class Simulation:
     def __init__(self, filename, clk="clk", reset="resetn"):
+        self.rcache = {}
         print(f"Loading '{filename}'", end=" ", flush=True)
         with open(filename) as vcd_file:
             vcd = VcdParser()
             vcd.parse(vcd_file)
             data = vcd.scope.toJson()
             self.data = flatten_vcd(data)
+        # with open(f"{filename}.json", "w") as f:
+        #     import json
+        #     json.dump(self.data, f, indent=2)
         print("... loaded.")
         clk_data = self.find_data([clk])
         if clk_data is None:
@@ -72,18 +81,26 @@ class Simulation:
 
     def find_data(self, filters):
         ret = None
-        first = True
         for f in filters:
-            if first:
-                ret = [i for i in self.data.values() if f in i["name"]]
-                first = False
+            try:
+                prog = self.rcache[f]
+            except KeyError:
+                prog = re.compile(f)
+                self.rcache[f] = prog
+            if ret is None:
+                ret = [i for i in self.data.values() if prog.search(i["name"]) is not None]
+                # ret = [i for i in self.data.values() if re.search(f, i["name"]) is not None]
             else:
-                ret = [i for i in ret if f in i["name"]]
-            print(len(ret))
+                ret = [i for i in ret if prog.search(i["name"]) is not None]
+                # ret = [i for i in ret if re.search(f, i["name"]) is not None]
             if len(ret) == 0:
                 return None
+        if ret is None:
+            return ret
         if len(ret) > 1:
-            print(f"[WARNING] More than one match for signal {filters}")
+            print(f"[WARNING] More than one match for signal {filters}: {len(ret)} sig.")
+            for r in ret:
+                print(" ", {key: val if key != "data" else len(val) for key, val in r.items()})
         return ret[0]
 
     def data_at_time(self, time, data):

@@ -48,13 +48,15 @@ class ODCCorrespondance:
             print(f"[ERROR] Net {net} not found in correspondance data.")
             return None
         for c in net_plugs:
-            print(c)
-            m = match(r"^subckt(_\d*_)", c["name"])
+            m = match(r"^subckt_(\d*_)", c["name"])
             if not m:
                 print(f"[ERROR] Could not extract subckt number of '{c["name"]}'")
                 return None
             nb = m.group(1)
-            res = self.sim.find_data([nb, c["io"]])
+            # _7343_ -> _07343_
+            res = self.sim.find_data([fr"_0*{nb}", "/"+c["io"]])
             if res is not None:
                 return res["name"]
+        for c in net_plugs:
+            print(c)
         return None

@@ -13,9 +13,9 @@ from ODCCorrespondance import ODCCorrespondance
 from ODCResults import ODCResults
 
 
-sim = Simulation("./post_synth.vcd")
-cor = ODCCorrespondance("./top_bien_correspondance.json", sim)
-res = ODCResults("./top_bien_odc.json", sim, cor)
+sim = Simulation("./t_nouveau.vcd")
+cor = ODCCorrespondance("./top_nouveau_correspondance.json", sim)
+res = ODCResults("./top_nouveau_odc.json", sim, cor)
 
 i = 0
 for t in sim:

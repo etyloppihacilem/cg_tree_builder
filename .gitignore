@@ -1,3 +1,5 @@
 *.json
 *.vcd
 __pycache__
+top_nouveau.blif
+top_nouveau_circuit.v
