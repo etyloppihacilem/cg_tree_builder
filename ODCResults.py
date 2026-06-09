@@ -59,6 +59,7 @@ class ODCRes:
             value = self.getBitValue(data)
             if value == "X":
                 print("Undefined behavior !!")
+                print("")
                 correspondance[sym] = S.false
                 # could be NaN but X does not go into Mutibs...
             elif value == "0":
@@ -70,8 +71,10 @@ class ODCRes:
         return 1 if result == S.true else 0
         # .subs etc
 
-    def addResult(self, val):
-        self.pattern.append(val)
+    def addResult(self, val, bindex):
+        if bindex >= len(self.pattern):
+            self.pattern.extend([0] * (bindex - len(self.pattern) + 1))
+        self.pattern[bindex] = val
 
     def to_dict(self):
         return {"name": self.name, "pattern": str(self.pattern)}
@@ -107,4 +110,4 @@ class ODCResults:
     def saveToFile(self, filename):
         print(f"Writing patterns to {filename}")
         with open(filename, "w") as f:
-            json.dump([s.to_dict() for s in self.data], f)
+            json.dump([s.to_dict() for s in self.data], f, indent=2)
