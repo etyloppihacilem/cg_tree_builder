@@ -32,7 +32,7 @@ class ODCRes:
             #     print(f"[ERROR] Signal {str(s)} has no correspondance.")
             #     raise ValueError
             sym = str(s)
-            match = ODCRes.re_offset.match(str(s))
+            match = ODCRes.re_offset.match(sym)
             if match is not None:
                 self.offset = int(match.group(2))
                 sym = match.group(1)
@@ -44,8 +44,9 @@ class ODCRes:
             if sig is None:
                 print(f"[ERROR] Signal {sym} was not found.")
                 raise ValueError
-            self.signals[sym] = sig["name"]
+            self.signals[str(s)] = sig["name"]
             self.sim = sim
+            self.correspondance = {}
 
     def getBitValue(self, data):
         if len(data[1]) <= self.offset:
@@ -53,23 +54,20 @@ class ODCRes:
         return data[1][self.offset]
 
     def calculate(self, time):
-        correspondance = {}
-        for sym, sig_name in self.signals.items():
-            data = self.sim.getSigAtTime(time, sig_name)
+        for symbol in self.function.atoms():
+            data = self.sim.getSigAtTime(time, str(self.signals[str(symbol)]))
             value = self.getBitValue(data)
             if value == "X":
                 print("Undefined behavior !!")
                 print("")
-                correspondance[sym] = S.false
+                self.correspondance[symbol] = False
                 # could be NaN but X does not go into Mutibs...
             elif value == "0":
-                correspondance[sym] = S.false
+                self.correspondance[symbol] = False
             elif value == "1":
-                correspondance[sym] = S.true
-        result = self.function.subs(correspondance)
-        # self.pattern.append(1 if result == S.true else 0)
+                self.correspondance[symbol] = True
+        result = self.function.subs(self.correspondance)
         return 1 if result == S.true else 0
-        # .subs etc
 
     def addResult(self, val, bindex):
         if bindex >= len(self.pattern):

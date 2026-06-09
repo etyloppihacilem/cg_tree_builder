@@ -77,7 +77,7 @@ try:
         print("\033[F\033[K" * 2, end="", flush=True)
 
     print(f"Elapsed time {str(elapsed).split('.')[0]}")
-    print("Waiting for processes to end.")
+    print("Waiting for processes to end. Could take a while as well.")
 
     for _ in range(NB_JOBS):
         todo.put((STOP, 0, 0))
