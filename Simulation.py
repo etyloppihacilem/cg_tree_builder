@@ -36,6 +36,7 @@ def flatten_vcd(data):
                 }
                 plug.update({"name": address})
                 plug["data"] = [(i[0], i[1]) for i in d["data"]]
+                plug["data_time"] = [int(i[0]) for i in d["data"]]
                 flat[address] = plug
         if "children" in d:
             todo.put(None)
@@ -48,7 +49,7 @@ def flatten_vcd(data):
 
 class Simulation:
     def __init__(self, filename, clk="clk", reset="resetn"):
-        # self.rcache = {}
+        self.used = set()
         print(f"Loading '{filename}'", end=" ", flush=True)
         with open(filename) as vcd_file:
             vcd = VcdParser()
@@ -68,7 +69,7 @@ class Simulation:
         if rst_data is None:
             print(f"[ERROR] Signal {reset} not found.")
             raise ValueError
-        self.rst_data = rst_data["data"]
+        self.rst_data = rst_data
         self.clk = []
         reset = True
         for i in self.clk_data:
@@ -111,15 +112,16 @@ class Simulation:
             )
             # for r in ret:
             #     print(" ", {key: val if key != "data" else len(val) for key, val in r.items()})
+        self.used.add(ret[0]["name"])
         return ret[0]
 
     def getSigAtTime(self, time, sig_name):
-        return self.dataAtTime(time, self.data[sig_name]["data"])
+        return self.dataAtTime(time, self.data[sig_name])
 
     def dataAtTime(self, time, data):
-        idx = bisect_right([int(i[0]) for i in data], time) - 1
+        idx = bisect_right(data["data_time"], time) - 1
         if idx >= 0:
-            return data[idx]
+            return data["data"][idx]
         print(f"[WARNING] No data at {time}")
         return None
 
@@ -128,11 +130,18 @@ class Simulation:
         if data is None:
             print(f"[ERROR] No match for {filters}")
             return None
-        data = data["data"]
         ret = self.dataAtTime(time, data)
         if ret is None:
             print(f"[ERROR] No data found at {time} for {filters}")
         return ret
+
+    def freeUnused(self):
+        selected = []
+        for key in self.data.keys():
+            if key not in self.used:
+                selected.append(key)
+        for key in selected:
+            del self.data[key]
 
     def __iter__(self):
         return iter(self.clk)

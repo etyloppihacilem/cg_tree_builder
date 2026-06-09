@@ -66,8 +66,12 @@ class ODCRes:
             elif value == "1":
                 correspondance[sym] = S.true
         result = self.function.subs(correspondance)
-        self.pattern.append(1 if result == S.true else 0)
+        # self.pattern.append(1 if result == S.true else 0)
+        return 1 if result == S.true else 0
         # .subs etc
+
+    def addResult(self, val):
+        self.pattern.append(val)
 
     def to_dict(self):
         return {"name": self.name, "pattern": str(self.pattern)}
@@ -101,5 +105,6 @@ class ODCResults:
             sig.calculate(time)
 
     def saveToFile(self, filename):
+        print(f"Writing patterns to {filename}")
         with open(filename, "w") as f:
             json.dump([s.to_dict() for s in self.data], f)
