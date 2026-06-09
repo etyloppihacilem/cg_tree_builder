@@ -8,18 +8,27 @@
 #
 # ######################################################################################################################
 
-from Simulation import Simulation
-from ODCCorrespondance import ODCCorrespondance
-from ODCResults import ODCResults
+from datetime import datetime
 
+from rich.traceback import install
+
+from ODCResults import ODCResults
+from Simulation import Simulation
+
+install(show_locals=True)
 
 sim = Simulation("./t_nouveau.vcd")
-cor = ODCCorrespondance("./top_nouveau_correspondance.json", sim)
-res = ODCResults("./top_nouveau_odc.json", sim, cor)
+# cor = ODCCorrespondance("./top_nouveau_correspondance.json", sim)
+res = ODCResults("./top_nouveau_odc.json", sim)
 
-i = 0
-for t in sim:
-    print(f"tick at {t}")
-    i+=1
-    if i > 20:
-        break
+start = datetime.now()
+
+for index, t in enumerate(sim):
+    print(f"tick {index}/{len(sim)} ({index * 100 / len(sim):.2f}%)")
+    res.stepAtTime(t)
+    print("\033[F\033[K", end="", flush=True)
+
+end = datetime.now()
+print(f"Elapsed time: {str(end - start).split('.')[0]} seconds")
+
+res.saveToFile("pattern_nouveau.json")

@@ -9,7 +9,6 @@
 # ######################################################################################################################
 
 from queue import LifoQueue
-import re
 from bisect import bisect_right
 from pyDigitalWaveTools.vcd.parser import VcdParser
 
@@ -29,6 +28,7 @@ def flatten_vcd(data):
         if "data" in d:
             if len(d["data"]) > 0:
                 address = "/".join(pile)
+                address = address.replace("\\\\", "\\")
                 plug = {
                     key: val
                     for key, val in d.items()
@@ -48,7 +48,7 @@ def flatten_vcd(data):
 
 class Simulation:
     def __init__(self, filename, clk="clk", reset="resetn"):
-        self.rcache = {}
+        # self.rcache = {}
         print(f"Loading '{filename}'", end=" ", flush=True)
         with open(filename) as vcd_file:
             vcd = VcdParser()
@@ -73,38 +73,51 @@ class Simulation:
         reset = True
         for i in self.clk_data:
             if reset:
-                val = self.data_at_time(i[0], self.rst_data)
+                val = self.dataAtTime(i[0], self.rst_data)
                 if val[1] == "1":
                     reset = False
             elif i[1] == "1":  # raising edge
                 self.clk.append(i[0])
 
     def find_data(self, filters):
+        if type(filters) is not list:
+            filters = [filters]
         ret = None
         for f in filters:
-            try:
-                prog = self.rcache[f]
-            except KeyError:
-                prog = re.compile(f)
-                self.rcache[f] = prog
+            # try:
+            #     prog = self.rcache[f]
+            # except KeyError:
+            #     prog = re.compile(f)
+            #     self.rcache[f] = prog
+            # print(f"filter: {f}")
             if ret is None:
-                ret = [i for i in self.data.values() if prog.search(i["name"]) is not None]
+                # ret = [i for i in self.data.values() if prog.search(i["name"]) is not None]
                 # ret = [i for i in self.data.values() if re.search(f, i["name"]) is not None]
+                ret = [i for i in self.data.values() if f in i["name"]]
             else:
-                ret = [i for i in ret if prog.search(i["name"]) is not None]
+                # ret = [i for i in ret if prog.search(i["name"]) is not None]
                 # ret = [i for i in ret if re.search(f, i["name"]) is not None]
+                ret = [i for i in ret if f in i["name"]]
+            # for i in self.data.values():
+            #     if "result_buffer" in i["name"]:
+            #         print({key: val if key != "data" else len(val) for key, val in i.items()})
             if len(ret) == 0:
                 return None
         if ret is None:
             return ret
         if len(ret) > 1:
-            print(f"[WARNING] More than one match for signal {filters}: {len(ret)} sig.")
-            for r in ret:
-                print(" ", {key: val if key != "data" else len(val) for key, val in r.items()})
+            print(
+                f"[WARNING] More than one match for signal {filters}: {len(ret)} sig."
+            )
+            # for r in ret:
+            #     print(" ", {key: val if key != "data" else len(val) for key, val in r.items()})
         return ret[0]
 
-    def data_at_time(self, time, data):
-        idx = bisect_right([i[0] for i in data], time) - 1
+    def getSigAtTime(self, time, sig_name):
+        return self.dataAtTime(time, self.data[sig_name]["data"])
+
+    def dataAtTime(self, time, data):
+        idx = bisect_right([int(i[0]) for i in data], time) - 1
         if idx >= 0:
             return data[idx]
         print(f"[WARNING] No data at {time}")
@@ -116,7 +129,7 @@ class Simulation:
             print(f"[ERROR] No match for {filters}")
             return None
         data = data["data"]
-        ret = self.data_at_time(time, data)
+        ret = self.dataAtTime(time, data)
         if ret is None:
             print(f"[ERROR] No data found at {time} for {filters}")
         return ret
