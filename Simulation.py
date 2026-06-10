@@ -48,7 +48,7 @@ def flatten_vcd(data):
 
 
 class Simulation:
-    def __init__(self, filename, clk="clk", reset="resetn"):
+    def __init__(self, filename, clk="clk", reset="resetn", json_filename=None):
         self.used = set()
         print(f"Loading '{filename}'", end=" ", flush=True)
         with open(filename) as vcd_file:
@@ -56,9 +56,10 @@ class Simulation:
             vcd.parse(vcd_file)
             data = vcd.scope.toJson()
             self.data = flatten_vcd(data)
-        # with open(f"{filename}.json", "w") as f:
-        #     import json
-        #     json.dump(self.data, f, indent=2)
+        if json_filename is not None:
+            with open(f"{json_filename}", "w") as f:
+                import json
+                json.dump(self.data, f, indent=2)
         print("... loaded.")
         clk_data = self.find_data([clk])
         if clk_data is None:
@@ -85,23 +86,10 @@ class Simulation:
             filters = [filters]
         ret = None
         for f in filters:
-            # try:
-            #     prog = self.rcache[f]
-            # except KeyError:
-            #     prog = re.compile(f)
-            #     self.rcache[f] = prog
-            # print(f"filter: {f}")
             if ret is None:
-                # ret = [i for i in self.data.values() if prog.search(i["name"]) is not None]
-                # ret = [i for i in self.data.values() if re.search(f, i["name"]) is not None]
                 ret = [i for i in self.data.values() if f in i["name"]]
             else:
-                # ret = [i for i in ret if prog.search(i["name"]) is not None]
-                # ret = [i for i in ret if re.search(f, i["name"]) is not None]
                 ret = [i for i in ret if f in i["name"]]
-            # for i in self.data.values():
-            #     if "result_buffer" in i["name"]:
-            #         print({key: val if key != "data" else len(val) for key, val in i.items()})
             if len(ret) == 0:
                 return None
         if ret is None:
@@ -110,8 +98,6 @@ class Simulation:
             print(
                 f"[WARNING] More than one match for signal {filters}: {len(ret)} sig."
             )
-            # for r in ret:
-            #     print(" ", {key: val if key != "data" else len(val) for key, val in r.items()})
         self.used.add(ret[0]["name"])
         return ret[0]
 

@@ -20,7 +20,7 @@ from Simulation import Simulation
 install(show_locals=True)
 
 NB_JOBS = 24
-WAIT = -1
+
 STOP = -2
 
 
@@ -41,9 +41,8 @@ def ResultThread(resultQueue: Queue, res: ODCResults):
         res.data[index].addResult(val, bindex)
 
 
-sim = Simulation("./t_nouveau.vcd")
-# cor = ODCCorrespondance("./top_nouveau_correspondance.json", sim)
-res = ODCResults("./top_nouveau_odc.json", sim)
+sim = Simulation("./t.vcd")
+res = ODCResults("./picorv32_complete_odc.json", sim)
 sim.freeUnused()
 
 todo = Queue(len(res.data) + NB_JOBS)
@@ -71,8 +70,6 @@ try:
 
         for i in range(len(res.data)):
             todo.put((i, bindex, t))
-        # result = res.data[0].calculate(t)
-        # todo_result.put((0, bindex, result))
 
         print("\033[F\033[K" * 2, end="", flush=True)
 
@@ -97,4 +94,4 @@ result_thread.join()
 end = datetime.now()
 print(f"Elapsed time: {str(end - start).split('.')[0]} seconds")
 
-res.saveToFile("pattern_nouveau.json")
+res.saveToFile("picorv32_complete_pattern.json")

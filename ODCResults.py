@@ -27,10 +27,6 @@ class ODCRes:
 
         self.signals = {}
         for s in self.function.atoms():
-            # sig_name = cor.get_signal_name(str(s))
-            # if sig_name is None:
-            #     print(f"[ERROR] Signal {str(s)} has no correspondance.")
-            #     raise ValueError
             sym = str(s)
             match = ODCRes.re_offset.match(sym)
             if match is not None:
@@ -87,13 +83,8 @@ class ODCResults:
 
         start = datetime.now()
 
-        # print("")
         for index, d in enumerate(data["odc_results"]):
-            # if index % 10 == 0:
-            #     print("\033[F\033[K", end="", flush=True)
-            #     print(f"Nets {index}/{len(data["odc_results"])} ({index*100/len(data["odc_results"]):.2f}%)")
             self.data.append(ODCRes(d, sim))
-        # print("\033[F\033[K", end="", flush=True)
 
         end = datetime.now()
         print(f"Elapsed time: {str(end - start).split('.')[0]} seconds")
