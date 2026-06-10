@@ -13,6 +13,29 @@ from bisect import bisect_right
 from pyDigitalWaveTools.vcd.parser import VcdParser
 
 
+def processValue(value: str, width: int) -> str:
+    raw_val = value[1:] if value.startswith("b") else value
+
+    if not raw_val:
+        raw_val = "0"
+
+    current_len = len(raw_val)
+
+    if current_len >= width:
+        return raw_val[current_len - width :]
+
+    msb = raw_val[0]
+    if msb in ("x", "z", "X", "Z"):
+        padding_char = msb.lower()
+    else:
+        padding_char = "0"
+
+    needed_padding = width - current_len
+    extended_value = (padding_char * needed_padding) + raw_val
+
+    return extended_value
+
+
 def flatten_vcd(data):
     flat = {}
     todo = LifoQueue()
@@ -35,7 +58,7 @@ def flatten_vcd(data):
                     if key not in {"name", "children", "data"}
                 }
                 plug.update({"name": address})
-                plug["data"] = [(i[0], i[1]) for i in d["data"]]
+                plug["data"] = [(i[0], processValue(i[1], d["type"]["width"])) for i in d["data"]]
                 plug["data_time"] = [int(i[0]) for i in d["data"]]
                 flat[address] = plug
         if "children" in d:
@@ -59,6 +82,7 @@ class Simulation:
         if json_filename is not None:
             with open(f"{json_filename}", "w") as f:
                 import json
+
                 json.dump(self.data, f, indent=2)
         print("... loaded.")
         clk_data = self.find_data([clk])

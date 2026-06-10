@@ -42,7 +42,7 @@ def ResultThread(resultQueue: Queue, res: ODCResults):
 
 
 res = ODCResults("./top_nouveau_odc.json")
-sim = Simulation("./t_nouveau.vcd")
+sim = Simulation("./t_nouveau.vcd", json_filename="t_nouveau.vcd.json")
 res.linkToSimulation(sim)
 sim.freeUnused()
 

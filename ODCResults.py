@@ -33,6 +33,7 @@ class ODCRes:
         self.signals = {}
         offset = 0
         for s in self.function.atoms():
+            offset = 0
             sym = str(s)
             match = ODCRes.re_offset.match(sym)
             if match is not None:
@@ -48,12 +49,14 @@ class ODCRes:
                 raise ValueError
             self.signals[str(s)] = sig["name"]
             self.offset[str(s)] = offset
+            if offset >= sig["type"]["width"]:
+                print(f"OH NO OFFSET NOT GOOD... {str(s)}: {sig['name']} (width: {sig['type']['width']}, offset: {offset})")
             self.sim = sim
         self.correspondance = {}
 
     def getBitValue(self, symbol, data):
-        if len(data[1]) <= self.offset[symbol]:
-            return "0"
+        # if len(data[1]) <= self.offset[symbol]:
+        #     return "0"
         return data[1][self.offset[symbol]]
 
     def calculate(self, time):
