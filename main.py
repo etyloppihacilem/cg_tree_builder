@@ -41,8 +41,9 @@ def ResultThread(resultQueue: Queue, res: ODCResults):
         res.data[index].addResult(val, bindex)
 
 
-sim = Simulation("./t.vcd")
-res = ODCResults("./picorv32_complete_odc.json", sim)
+res = ODCResults("./top_nouveau_odc.json")
+sim = Simulation("./t_nouveau.vcd")
+res.linkToSimulation(sim)
 sim.freeUnused()
 
 todo = Queue(len(res.data) + NB_JOBS)
@@ -63,15 +64,18 @@ for p in processes:
     p.start()
 
 try:
+    print("\n")
+    last_print = datetime.now() - start
     for bindex, t in enumerate(sim):
         elapsed = datetime.now() - start
-        print(f"tick {bindex}/{len(sim)} ({bindex * 100 / len(sim):.2f}%)")
-        print(f"Elapsed time {str(elapsed).split('.')[0]} ; ETA {str(((len(sim) - (bindex + 1)) * elapsed) / (bindex + 1)).split('.')[0]}")
+        if (elapsed - last_print).total_seconds() >= 1.0:
+            last_print = elapsed
+            print("\033[F\033[K" * 2, end="", flush=True)
+            print(f"tick {bindex}/{len(sim)} ({bindex * 100 / len(sim):.2f}%)")
+            print(f"Elapsed time {str(elapsed).split('.')[0]} ; ETA {str(((len(sim) - (bindex + 1)) * elapsed) / (bindex + 1)).split('.')[0]}")
 
         for i in range(len(res.data)):
             todo.put((i, bindex, t))
-
-        print("\033[F\033[K" * 2, end="", flush=True)
 
     print(f"Elapsed time {str(elapsed).split('.')[0]}")
     print("Waiting for processes to end. Could take a while as well.")
@@ -94,4 +98,4 @@ result_thread.join()
 end = datetime.now()
 print(f"Elapsed time: {str(end - start).split('.')[0]} seconds")
 
-res.saveToFile("picorv32_complete_pattern.json")
+res.saveToFile("pattern_nouveau.json")

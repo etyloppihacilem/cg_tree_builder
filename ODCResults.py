@@ -19,18 +19,24 @@ from tibs import Mutibs
 class ODCRes:
     re_offset = re.compile(r"(.*)\[(\d*)\]")
 
-    def __init__(self, result: dict, sim):
+    def __init__(self, result: dict):
         self.name = result["name"]
         self.function = sympify(result["function_sympy"])
         self.pattern = Mutibs()
-        self.offset = 0
 
+        self.offset = {}
         self.signals = {}
+        self.correspondance = {}
+        self.sim = None
+
+    def linkToSimulation(self, sim):
+        self.signals = {}
+        offset = 0
         for s in self.function.atoms():
             sym = str(s)
             match = ODCRes.re_offset.match(sym)
             if match is not None:
-                self.offset = int(match.group(2))
+                offset = int(match.group(2))
                 sym = match.group(1)
             try:
                 sig = sim.find_data([sym])
@@ -41,18 +47,19 @@ class ODCRes:
                 print(f"[ERROR] Signal {sym} was not found.")
                 raise ValueError
             self.signals[str(s)] = sig["name"]
+            self.offset[str(s)] = offset
             self.sim = sim
-            self.correspondance = {}
+        self.correspondance = {}
 
-    def getBitValue(self, data):
-        if len(data[1]) <= self.offset:
+    def getBitValue(self, symbol, data):
+        if len(data[1]) <= self.offset[symbol]:
             return "0"
-        return data[1][self.offset]
+        return data[1][self.offset[symbol]]
 
     def calculate(self, time):
         for symbol in self.function.atoms():
             data = self.sim.getSigAtTime(time, str(self.signals[str(symbol)]))
-            value = self.getBitValue(data)
+            value = self.getBitValue(str(symbol), data)
             if value == "X":
                 print("Undefined behavior !!")
                 print("")
@@ -75,22 +82,22 @@ class ODCRes:
 
 
 class ODCResults:
-    def __init__(self, filename, sim):
-        print(f"Loading '{filename}', looking for nets into vcd, could take a while.")
+    def __init__(self, filename):
+        print(f"Loading '{filename}'")
         with open(filename) as f:
             data = json.load(f)
         self.data = []
 
-        start = datetime.now()
-
         for index, d in enumerate(data["odc_results"]):
-            self.data.append(ODCRes(d, sim))
+            self.data.append(ODCRes(d))
 
+    def linkToSimulation(self, sim):
+        print("Linking odc to vcd nets, could take a while.")
+        start = datetime.now()
+        for d in self.data:
+            d.linkToSimulation(sim)
         end = datetime.now()
-        print(f"Elapsed time: {str(end - start).split('.')[0]} seconds")
-
-        self.sim = sim
-        print("... loaded.")
+        print(f"Done. Elapsed time: {str(end - start).split('.')[0]} seconds")
 
     def stepAtTime(self, time):
         for sig in self.data:
