@@ -58,7 +58,9 @@ def flatten_vcd(data):
                     if key not in {"name", "children", "data"}
                 }
                 plug.update({"name": address})
-                plug["data"] = [(i[0], processValue(i[1], d["type"]["width"])) for i in d["data"]]
+                plug["data"] = [
+                    (i[0], processValue(i[1], d["type"]["width"])) for i in d["data"]
+                ]
                 plug["data_time"] = [int(i[0]) for i in d["data"]]
                 flat[address] = plug
         if "children" in d:
@@ -73,7 +75,7 @@ def flatten_vcd(data):
 class Simulation:
     def __init__(self, filename, clk="clk", reset="resetn", json_filename=None):
         self.used = set()
-        print(f"Loading '{filename}'", end=" ", flush=True)
+        print(f"Loading '{filename}', could take some time", end=" ", flush=True)
         with open(filename) as vcd_file:
             vcd = VcdParser()
             vcd.parse(vcd_file)
@@ -122,6 +124,8 @@ class Simulation:
             print(
                 f"[WARNING] More than one match for signal {filters}: {len(ret)} sig."
             )
+            for sig in ret:
+                print(f"  {sig['name']}: {len(sig['data'])} records.")
         self.used.add(ret[0]["name"])
         return ret[0]
 
