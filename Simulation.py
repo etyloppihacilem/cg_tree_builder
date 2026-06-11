@@ -11,6 +11,7 @@
 from queue import LifoQueue
 from bisect import bisect_right
 from pyDigitalWaveTools.vcd.parser import VcdParser
+from tibs import Mutibs, Tibs
 
 
 def processValue(value: str, width: int) -> str:
@@ -150,6 +151,30 @@ class Simulation:
         if ret is None:
             print(f"[ERROR] No data found at {time} for {filters}")
         return ret
+
+    def getVector(self, sig_name) -> Tibs:
+        vector = Mutibs()
+        data = self.data[sig_name]["data"]
+        dindex = 0
+        dtime, val = data[dindex]
+        # print(str(sig_name))
+        for time in self.clk:
+            # print(f"{time} - {dtime} - {(data[dindex + 1][0] if dindex >= len(data) else time)} val:{val}")
+            while dindex + 1 < len(data) and time >= data[dindex + 1][0]:
+                dindex += 1
+                # print(f"... {dtime} val:{val}")
+                dtime, val = data[dindex]
+                # print(f"... {dtime} val:{val}")
+                # print("*" * 8)
+            if val == "1":
+                vector.append(1)
+            else:
+                vector.append(0)
+        # print(str(vector))
+        # print("\n".join([str(d) for d in data]))
+        # if len(data) > 1:
+        #     input(":")
+        return vector.to_tibs()
 
     def freeUnused(self):
         selected = []

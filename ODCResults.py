@@ -12,8 +12,8 @@ import json
 import re
 from datetime import datetime
 
-from sympy import sympify, S
-from tibs import Mutibs
+from sympy import sympify, S, lambdify
+from tibs import Mutibs, Tibs
 
 
 class ODCRes:
@@ -27,6 +27,7 @@ class ODCRes:
         self.offset = {}
         self.signals = {}
         self.correspondance = {}
+        self.data_vector = {}
         self.sim = None
 
     def linkToSimulation(self, sim):
@@ -59,26 +60,26 @@ class ODCRes:
         #     return "0"
         return data[1][self.offset[symbol]]
 
-    def calculate(self, time):
-        for symbol in self.function.atoms():
-            data = self.sim.getSigAtTime(time, str(self.signals[str(symbol)]))
-            value = self.getBitValue(str(symbol), data)
-            if value == "X":
-                print("Undefined behavior !!")
-                print("")
-                self.correspondance[symbol] = False
-                # could be NaN but X does not go into Mutibs...
-            elif value == "0":
-                self.correspondance[symbol] = False
-            elif value == "1":
-                self.correspondance[symbol] = True
-        result = self.function.subs(self.correspondance)
-        return 1 if result == S.true else 0
+    def run(self):
+        self.addToDataVector()
+        self.calculate()
 
-    def addResult(self, val, bindex):
-        if bindex >= len(self.pattern):
-            self.pattern.extend([0] * (bindex - len(self.pattern) + 1))
-        self.pattern[bindex] = val
+    def addToDataVector(self):
+        func_symbols = self.function.atoms()
+        data_dict = {}
+        for symbol in func_symbols:
+            data_dict[str(symbol)] = self.sim.getVector(str(self.signals[str(symbol)]))
+        self.data_vector = [data_dict[k] for k in sorted(data_dict)]
+
+    def calculate(self):
+        symboles_ordonnes = sorted(list(self.function.free_symbols), key=lambda s: s.name)
+        fonction_bool = lambdify(symboles_ordonnes, self.function, modules='numpy')
+        self.pattern = Tibs(fonction_bool(*self.data_vector))
+
+    # def addResult(self, val, bindex):
+    #     if bindex >= len(self.pattern):
+    #         self.pattern.extend([0] * (bindex - len(self.pattern) + 1))
+    #     self.pattern[bindex] = val
 
     def to_dict(self):
         return {"name": self.name, "pattern": str(self.pattern)}

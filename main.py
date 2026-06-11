@@ -20,27 +20,8 @@ from Simulation import Simulation
 
 install(show_locals=True)
 
-STOP = -2
 
-
-def PatternCalculator(queue: Queue, resultQueue: Queue, res: ODCResults):
-    while True:
-        index, bindex, time = queue.get()
-        if index == STOP:
-            break
-        result = res.data[index].calculate(time)
-        resultQueue.put((index, bindex, result))
-
-
-def ResultThread(resultQueue: Queue, res: ODCResults):
-    while True:
-        index, bindex, val = resultQueue.get()
-        if index == STOP:
-            break
-        res.data[index].addResult(val, bindex)
-
-
-def runPatternExtraction(res, vcd_file, vcd_to_json, clk_name, rst_name, nb_jobs):
+def runPatternExtraction(res, vcd_file, vcd_to_json, clk_name, rst_name):
 
     sim = Simulation(
         vcd_file,
@@ -51,58 +32,11 @@ def runPatternExtraction(res, vcd_file, vcd_to_json, clk_name, rst_name, nb_jobs
     res.linkToSimulation(sim)
     sim.freeUnused()
 
-    todo = Queue(len(res.data) + nb_jobs)
-    todo_result = Queue()
-
     start = datetime.now()
 
-    processes = []
-    for _ in range(nb_jobs):
-        processes.append(
-            Process(target=PatternCalculator, args=(todo, todo_result, res))
-        )
-
-    result_thread = Thread(target=ResultThread, args=(todo_result, res))
-    result_thread.start()
-
-    for p in processes:
-        p.start()
-
-    try:
-        print("\n")
-        last_print = datetime.now() - start
-        for bindex, t in enumerate(sim):
-            elapsed = datetime.now() - start
-            if (elapsed - last_print).total_seconds() >= 1.0:
-                last_print = elapsed
-                eta = str(((len(sim) - (bindex + 1)) * elapsed) / (bindex + 1)).split(
-                    "."
-                )[0]
-                print("\033[F\033[K" * 2, end="", flush=True)
-                print(f"tick {bindex}/{len(sim)} ({bindex * 100 / len(sim):.2f}%)")
-                print(f"Elapsed time {str(elapsed).split('.')[0]} ; ETA {eta}")
-
-            for i in range(len(res.data)):
-                todo.put((i, bindex, t))
-
-        elapsed = datetime.now() - start
-        print(f"Elapsed time {str(elapsed).split('.')[0]}")
-        print("Waiting for processes to end. Could take a while as well.")
-
-        for _ in range(nb_jobs):
-            todo.put((STOP, 0, 0))
-    except BaseException as e:
-        for p in processes:
-            p.kill()
-            p.join()
-        raise e
-
-    for p in processes:
-        p.join()
-
-    todo_result.put((STOP, -1, -1))
-
-    result_thread.join()
+    for i, r in enumerate(res.data):
+        print(f"{i}/{len(res.data)}")
+        r.run()
 
     end = datetime.now()
     print(f"Elapsed time: {str(end - start).split('.')[0]} seconds")
@@ -142,13 +76,6 @@ if __name__ == "__main__":
         help="Le nom du signal de reset dans les simulations",
     )
     parser.add_argument(
-        "-n",
-        "--nb_jobs",
-        type=int,
-        default=4,
-        help="Le nombre de process à lancer pour le traitement des simulations",
-    )
-    parser.add_argument(
         "-o",
         "--output",
         type=str,
@@ -161,7 +88,7 @@ if __name__ == "__main__":
     for vcd in args.simulation:
         print(f"Extracting patterns from '{vcd}'")
         runPatternExtraction(
-            res, vcd, args.sim_output, args.clk_signal, args.reset_signal, args.nb_jobs
+            res, vcd, args.sim_output, args.clk_signal, args.reset_signal
         )
         print(f"Patterns extracted from '{vcd}'")
     res.saveToFile(args.output)
