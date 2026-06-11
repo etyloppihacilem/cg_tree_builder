@@ -104,8 +104,10 @@ class Simulation:
                 val = self.dataAtTime(i[0], self.rst_data)
                 if val[1] == "1":
                     reset = False
-            elif i[1] == "1":  # raising edge
-                self.clk.append(i[0])
+            # elif i[1] == "1":  # raising edge
+                else:
+                    continue
+            self.clk.append(i[0])
 
     def find_data(self, filters):
         if type(filters) is not list:
