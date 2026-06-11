@@ -12,7 +12,7 @@ import json
 import re
 from datetime import datetime
 
-from sympy import sympify, S, lambdify
+from sympy import lambdify, sympify
 from tibs import Mutibs, Tibs
 
 

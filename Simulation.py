@@ -8,8 +8,9 @@
 #
 # ######################################################################################################################
 
-from queue import LifoQueue
 from bisect import bisect_right
+from queue import LifoQueue
+
 from pyDigitalWaveTools.vcd.parser import VcdParser
 from tibs import Mutibs, Tibs
 

@@ -10,8 +10,6 @@
 
 import argparse
 from datetime import datetime
-from multiprocessing import Process, Queue
-from threading import Thread
 
 from rich.traceback import install
 
