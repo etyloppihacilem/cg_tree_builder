@@ -76,6 +76,10 @@ def flatten_vcd(data):
 class Simulation:
     def __init__(self, filename, clk="clk", reset="resetn", json_filename=None):
         self.used = set()
+        self.vector_cache = {}
+        self.vector_cache_done = set()
+        self.symbol_cache = {}
+        self.symbol_cache_done = set()
         print(f"Loading '{filename}', could take some time", end=" ", flush=True)
         with open(filename) as vcd_file:
             vcd = VcdParser()
@@ -105,10 +109,19 @@ class Simulation:
                 val = self.dataAtTime(i[0], self.rst_data)
                 if val[1] == "1":
                     reset = False
-            # elif i[1] == "1":  # raising edge
                 else:
                     continue
             self.clk.append(i[0])
+
+    def getSymCache(self, sym):
+        if sym in self.symbol_cache_done:
+            return self.symbol_cache[sym]
+        else:
+            return None
+
+    def addSymCache(self, sym, name, offset):
+        self.symbol_cache_done.add(sym)
+        self.symbol_cache[sym] = (name, offset)
 
     def find_data(self, filters):
         if type(filters) is not list:
@@ -132,9 +145,6 @@ class Simulation:
         self.used.add(ret[0]["name"])
         return ret[0]
 
-    def getSigAtTime(self, time, sig_name):
-        return self.dataAtTime(time, self.data[sig_name])
-
     def dataAtTime(self, time, data):
         idx = bisect_right(data["data_time"], time) - 1
         if idx >= 0:
@@ -142,39 +152,25 @@ class Simulation:
         print(f"[WARNING] No data at {time}")
         return None
 
-    def get_data(self, time, filters):
-        data = self.find_data(filters)
-        if data is None:
-            print(f"[ERROR] No match for {filters}")
-            return None
-        ret = self.dataAtTime(time, data)
-        if ret is None:
-            print(f"[ERROR] No data found at {time} for {filters}")
-        return ret
-
     def getVector(self, sig_name) -> Tibs:
+        if sig_name in self.vector_cache_done:
+            return self.vector_cache[sig_name]
         vector = Mutibs()
         data = self.data[sig_name]["data"]
         dindex = 0
         dtime, val = data[dindex]
-        # print(str(sig_name))
         for time in self.clk:
-            # print(f"{time} - {dtime} - {(data[dindex + 1][0] if dindex >= len(data) else time)} val:{val}")
             while dindex + 1 < len(data) and time >= data[dindex + 1][0]:
                 dindex += 1
-                # print(f"... {dtime} val:{val}")
                 dtime, val = data[dindex]
-                # print(f"... {dtime} val:{val}")
-                # print("*" * 8)
             if val == "1":
                 vector.append(1)
             else:
                 vector.append(0)
-        # print(str(vector))
-        # print("\n".join([str(d) for d in data]))
-        # if len(data) > 1:
-        #     input(":")
-        return vector.to_tibs()
+        ret = vector.to_tibs()
+        self.vector_cache[sig_name] = ret
+        self.vector_cache_done.add(sig_name)
+        return ret
 
     def freeUnused(self):
         selected = []
@@ -183,6 +179,8 @@ class Simulation:
                 selected.append(key)
         for key in selected:
             del self.data[key]
+        del self.symbol_cache
+        del self.symbol_cache_done
 
     def __iter__(self):
         return iter(self.clk)

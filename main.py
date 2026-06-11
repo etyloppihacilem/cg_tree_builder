@@ -22,7 +22,6 @@ install(show_locals=True)
 
 
 def runPatternExtraction(res, vcd_file, vcd_to_json, clk_name, rst_name):
-
     sim = Simulation(
         vcd_file,
         clk=clk_name,
@@ -34,9 +33,11 @@ def runPatternExtraction(res, vcd_file, vcd_to_json, clk_name, rst_name):
 
     start = datetime.now()
 
+    len_res_data = len(res.data)
     for i, r in enumerate(res.data):
-        print(f"{i}/{len(res.data)}")
+        print(f"{i}/{len_res_data} ({i * 100 / len_res_data:.2f}%)")
         r.run()
+        print("\033[F\033[K", end="")
 
     end = datetime.now()
     print(f"Elapsed time: {str(end - start).split('.')[0]} seconds")

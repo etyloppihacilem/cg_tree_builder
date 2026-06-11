@@ -32,33 +32,36 @@ class ODCRes:
 
     def linkToSimulation(self, sim):
         self.signals = {}
+        self.sim = sim
         offset = 0
         for s in self.function.atoms():
             offset = 0
             sym = str(s)
-            match = ODCRes.re_offset.match(sym)
-            if match is not None:
-                offset = int(match.group(2))
-                sym = match.group(1)
-            try:
-                sig = sim.find_data([sym])
-            except re.PatternError as e:
-                print(f"problem with: {sym}")
-                raise e
-            if sig is None:
-                print(f"[ERROR] Signal {sym} was not found.")
-                raise ValueError
-            self.signals[str(s)] = sig["name"]
-            self.offset[str(s)] = offset
-            if offset >= sig["type"]["width"]:
-                print(f"OH NO OFFSET NOT GOOD... {str(s)}: {sig['name']} (width: {sig['type']['width']}, offset: {offset})")
-            self.sim = sim
+            cached = self.sim.getSymCache(sym)
+            if cached is None:
+                match = ODCRes.re_offset.match(sym)
+                if match is not None:
+                    offset = int(match.group(2))
+                    sym = match.group(1)
+                try:
+                    sig = sim.find_data([sym])
+                except re.PatternError as e:
+                    print(f"problem with: {sym}")
+                    raise e
+                if sig is None:
+                    print(f"[ERROR] Signal {sym} was not found.")
+                    raise ValueError
+                self.signals[str(s)] = sig["name"]
+                self.offset[str(s)] = offset
+                if offset >= sig["type"]["width"]:
+                    print(
+                        f"OFFSET NOT GOOD: {str(s)}: {sig['name']} (width: {sig['type']['width']}, offset: {offset})"
+                    )
+                self.sim.addSymCache(str(s), sig["name"], offset)
+            else:
+                self.signals[str(s)] = cached[0]
+                self.offset[str(s)] = cached[1]
         self.correspondance = {}
-
-    def getBitValue(self, symbol, data):
-        # if len(data[1]) <= self.offset[symbol]:
-        #     return "0"
-        return data[1][self.offset[symbol]]
 
     def run(self):
         self.addToDataVector()
@@ -72,14 +75,11 @@ class ODCRes:
         self.data_vector = [data_dict[k] for k in sorted(data_dict)]
 
     def calculate(self):
-        symboles_ordonnes = sorted(list(self.function.free_symbols), key=lambda s: s.name)
-        fonction_bool = lambdify(symboles_ordonnes, self.function, modules='numpy')
+        symboles_ordonnes = sorted(
+            list(self.function.free_symbols), key=lambda s: s.name
+        )
+        fonction_bool = lambdify(symboles_ordonnes, self.function, modules="numpy")
         self.pattern = Tibs(fonction_bool(*self.data_vector))
-
-    # def addResult(self, val, bindex):
-    #     if bindex >= len(self.pattern):
-    #         self.pattern.extend([0] * (bindex - len(self.pattern) + 1))
-    #     self.pattern[bindex] = val
 
     def to_dict(self):
         return {"name": self.name, "pattern": str(self.pattern)}
