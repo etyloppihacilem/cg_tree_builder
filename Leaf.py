@@ -70,6 +70,16 @@ class Leaf:
         else:
             raise IndexError
 
+    def distance(self):
+        if self.left is None or self.right is None:
+            return -1
+        return self.left ^ self.right
+
+    def norme(self):
+        if self.left is None or self.right is None:
+            return -1
+        return (self.left ^ self.right) / len(self.pattern)
+
     def __len__(self):
         return (0 if self.left is None else 1) + (0 if self.right is None else 1)
 
@@ -80,12 +90,8 @@ class Leaf:
         return {
             "name": self.name,
             "pattern": str(self.pattern),
-            "distance": -1
-            if self.right is None or self.left is None
-            else self.left ^ self.right,
-            "norme": -1
-            if self.right is None or self.left is None
-            else (self.left ^ self.right) / len(self.right.pattern),
+            "distance": self.distance(),
+            "norme": self.norme(),
             "left": self.left.toDict() if self.left is not None else None,
             "right": self.right.toDict() if self.right is not None else None,
             # "function": str(self.function),
