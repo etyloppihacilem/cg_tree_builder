@@ -13,8 +13,10 @@ from datetime import datetime
 
 from rich.traceback import install
 
+from Leaf import Leaf
 from ODCResults import ODCResults
 from Simulation import Simulation
+from Tree import Tree
 
 install(show_locals=True)
 
@@ -81,6 +83,13 @@ if __name__ == "__main__":
         default="pattern.json",
         help="Le fichier JSON de sortie où les motifs seront écrits",
     )
+    parser.add_argument(
+        "-t",
+        "--tree",
+        type=str,
+        default=None,
+        help="Le fichier JSON de sortie où les motifs seront écrits",
+    )
     args = parser.parse_args()
 
     res = ODCResults(args.odc_file)
@@ -91,3 +100,12 @@ if __name__ == "__main__":
         )
         print(f"Patterns extracted from '{vcd}'")
     res.saveToFile(args.output)
+    if args.tree is not None:
+        print("Initializing Tree")
+        tree = Tree()
+        for d in res.data:
+            leaf = Leaf()
+            leaf.initFromODCRes(d)
+            tree.addLeaf(leaf)
+        tree.buildTree()
+        tree.saveToFile(args.tree)
