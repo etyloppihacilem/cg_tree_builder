@@ -13,7 +13,7 @@ import re
 from datetime import datetime
 
 from sympy import lambdify, sympify
-from tibs import Mutibs, Tibs
+from tibs import Tibs
 
 
 class ODCRes:
@@ -22,7 +22,7 @@ class ODCRes:
     def __init__(self, result: dict):
         self.name = result["name"]
         self.function = sympify(result["function_sympy"])
-        self.pattern = Mutibs()
+        self.pattern = None
 
         self.offset = {}
         self.signals = {}
